@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { BouncyAccordion } from "#/components/motion/bouncy-accordion";
+import { ArchetypeAuditChart } from "#/components/portfolio/ArchetypeAuditChart";
+import { MethodologyFlow } from "#/components/portfolio/MethodologyFlow";
 import { TelemetryStrip } from "#/components/portfolio/TelemetryStrip";
 import { count, pct, titleCase } from "#/lib/format";
 import { PORTFOLIO_QUESTIONS, QUESTION_META } from "#/lib/portfolio/questions";
@@ -96,9 +98,9 @@ function Methodology() {
 			</h1>
 			<p className="mt-4 max-w-2xl text-pretty text-muted-foreground">
 				Nothing on this site asks a model to decide a priority. It asks six
-				narrow questions about evidence, gets calibrated probabilities back, and
-				then does ordinary arithmetic. This page is the whole method, including
-				the parts that would be embarrassing if they were wrong.
+				narrow questions about evidence, gets constrained probability outputs
+				back, and then does ordinary arithmetic. This page is the whole method,
+				including the parts that would be embarrassing if they were wrong.
 			</p>
 
 			{telemetry ? (
@@ -106,6 +108,8 @@ function Methodology() {
 					<TelemetryStrip telemetry={telemetry} animate={false} />
 				</div>
 			) : null}
+
+			<MethodologyFlow />
 
 			<Section kicker="Step one" title="One request per account, six questions">
 				<p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
@@ -186,8 +190,23 @@ priorityScore =
 					account{falseFlags === 1 ? "" : "s"} that was meant to be quiet.
 				</p>
 
-				<div className="mt-5 overflow-x-auto rounded-xl border border-border/60">
+				<ArchetypeAuditChart audit={audit} />
+
+				<p className="mt-6 text-sm font-medium">Full audit data</p>
+				<p className="mt-1 text-xs text-muted-foreground">
+					Scroll the table horizontally to see every signal and urgency score.
+				</p>
+				<section
+					aria-label="Full archetype audit data, scroll horizontally"
+					// biome-ignore lint/a11y/noNoninteractiveTabindex: The overflow region must be keyboard-scrollable.
+					tabIndex={0}
+					className="mt-3 overflow-x-auto rounded-xl border border-border/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+				>
 					<table className="w-full min-w-[720px] border-collapse text-sm">
+						<caption className="sr-only">
+							Synthetic archetypes: planted accounts, routing outcomes and mean
+							model outputs
+						</caption>
 						<thead>
 							<tr className="border-b border-border/60 bg-card/60">
 								<th className="label-caps px-4 py-3 text-left">
@@ -238,13 +257,14 @@ priorityScore =
 							))}
 						</tbody>
 					</table>
-				</div>
+				</section>
 
 				<p className="mt-3 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-					The last four columns are mean probabilities across every account of
-					that archetype. They are the interesting part: the separation between
-					a planted problem and planted noise is produced by the model reading
-					the record, not by a rule keyed to the field the generator moved.
+					Attention, churn and expansion are mean model outputs across each
+					archetype; urgency is a mean rubric score, not a probability. The
+					separation between a planted problem and planted noise is produced by
+					the model reading the record, not by a rule keyed to the field the
+					generator moved.
 				</p>
 			</Section>
 

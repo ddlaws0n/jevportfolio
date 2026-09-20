@@ -13,6 +13,8 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
+    "precommit": "bun run check && bun run typecheck",
+    "hooks:install": "sh scripts/install-git-hooks.sh",
     "dev:op": "op run --env-file .env.op -- vite dev --port 3000",
     "baseline": "bun run scripts/build-baseline.ts",
     "baseline:op": "op run --env-file .env.op -- bun run scripts/build-baseline.ts",
@@ -39,7 +41,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.5",
+    "@biomejs/biome": "2.5.14",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/router-cli": "^1.132.0",
     "@types/node": "^22.10.2",

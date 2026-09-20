@@ -422,8 +422,8 @@ score 40 → "at risk"`}
 "Who should own it?"              Leadership`}
 					</pre>
 					<p className="mt-2 text-xs text-muted-foreground">
-						Jev supplies semantic judgment with calibrated probabilities. The
-						thresholds, the weights and the final band stay in{" "}
+						Jev supplies semantic judgment with constrained probability outputs.
+						The thresholds, the weights and the final band stay in{" "}
 						<code className="rounded bg-card px-1 py-0.5">triage.ts</code>.{" "}
 						<Link
 							to="/methodology"

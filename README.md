@@ -122,7 +122,10 @@ excluded from linting.
 
 ```sh
 bun install
+bun run hooks:install
 ```
+
+`bun run hooks:install` configures this repository to use the tracked pre-commit hook. It refuses to replace an existing `core.hooksPath`; run `bun run precommit` to check formatting, linting, and types manually.
 
 Set `TYPESAFE_API_KEY` in `.env.local` (see `.env.example`), or keep it in
 1Password and use the `:op` scripts, which resolve `.env.op`:
