@@ -3,7 +3,6 @@ node_modules
 dist
 dist-ssr
 *.local
-.env
 .nitro
 .tanstack
 .wrangler
@@ -11,8 +10,11 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
-
-!.env.example
-.env*
 .vercel
 .claude/logs
+
+# Secrets stay out. The example and the 1Password reference file carry no
+# secret values, so they are tracked.
+.env*
+!.env.example
+!.env.op
