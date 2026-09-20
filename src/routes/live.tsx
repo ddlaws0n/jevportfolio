@@ -45,7 +45,7 @@ export const Route = createFileRoute("/live")({
 	loader: () => getRunnerStatus(),
 	head: () => ({
 		meta: [
-			{ title: "Live run — 1000 Accounts" },
+			{ title: "Live run — Who Needs You" },
 			{
 				name: "description",
 				content:

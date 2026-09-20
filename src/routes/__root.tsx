@@ -8,16 +8,16 @@ import {
 import { PORTFOLIO_SEARCH_DEFAULTS } from "#/lib/portfolio/search";
 import appCss from "#/styles.css?url";
 
-const TITLE = "1000 Accounts — portfolio triage with Jev";
+const TITLE = "Who Needs You — 1,000 accounts, triaged by Jev";
 const DESCRIPTION =
-	"1,000 synthetic customer accounts. 6,000 constrained AI judgments from TypeSafe's Jev. Software keeps the final decision.";
+	"It's Monday and you manage 1,000 customers. Jev answers six questions about each one; code turns 6,000 probabilities into the handful worth opening.";
 
 /**
  * Social cards need absolute URLs, and the deployment does not know its own
  * public origin at build time. `VITE_SITE_URL` is public by design — it is the
  * address of this page.
  */
-const FALLBACK_SITE_URL = "https://jevportfolio-three.vercel.app";
+const FALLBACK_SITE_URL = "https://whoneedsyou.vercel.app";
 // An env var that is defined but blank survives `??`, and a blank origin makes
 // `og:image` relative — which no social card scraper will resolve.
 const SITE_URL = (
@@ -34,7 +34,7 @@ export const Route = createRootRoute({
 			{ title: TITLE },
 			{ name: "description", content: DESCRIPTION },
 			{ name: "theme-color", content: "#131418" },
-			{ property: "og:site_name", content: "1000 Accounts" },
+			{ property: "og:site_name", content: "Who Needs You" },
 			{ property: "og:title", content: TITLE },
 			{ property: "og:description", content: DESCRIPTION },
 			{ property: "og:type", content: "website" },
@@ -45,7 +45,7 @@ export const Route = createRootRoute({
 			{
 				property: "og:image:alt",
 				content:
-					"A grid of 1,000 account squares with 181 highlighted, above the measured run: 1,000 accounts, 6,000 AI judgments, 9.37 seconds, $0.0775.",
+					"A grid of 1,000 account squares with 181 highlighted, above the measured run: 1,000 accounts, 6,000 Jev judgments, 9.37 seconds, $0.0775.",
 			},
 			{ name: "twitter:card", content: "summary_large_image" },
 			{ name: "twitter:title", content: TITLE },
@@ -101,7 +101,7 @@ function SiteHeader() {
 					<span className="grid h-6 w-6 place-items-center rounded-md bg-primary/15 text-primary">
 						<span className="block h-2 w-2 rounded-[2px] bg-primary" />
 					</span>
-					<span>1000 Accounts</span>
+					<span>Who Needs You</span>
 				</Link>
 
 				<nav className="hidden items-center gap-1 text-sm sm:flex">

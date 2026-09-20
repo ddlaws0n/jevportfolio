@@ -17,7 +17,7 @@ export const Route = createFileRoute("/methodology")({
 	loader: () => getMethodology(),
 	head: () => ({
 		meta: [
-			{ title: "Methodology — 1000 Accounts" },
+			{ title: "Methodology — Who Needs You" },
 			{
 				name: "description",
 				content:

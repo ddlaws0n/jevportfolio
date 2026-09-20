@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "jevportfolio",
+      "name": "who-needs-you",
       "dependencies": {
         "@tailwindcss/vite": "^4.1.18",
         "@tanstack/react-devtools": "latest",

@@ -73,12 +73,12 @@ function Hero() {
 			<div className="mx-auto w-full max-w-[1400px] px-4 pb-10 pt-14 sm:px-6 sm:pb-14 sm:pt-20">
 				<p className="label-caps">Portfolio triage · TypeSafe Jev</p>
 				<h1 className="mt-4 max-w-3xl text-balance text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
-					Your customer portfolio has 1,000 accounts.
+					It&rsquo;s Monday. Who actually needs you?
 				</h1>
 				<p className="mt-4 max-w-2xl text-pretty text-lg text-muted-foreground">
-					You have Monday morning to work out who actually needs you. Six
-					constrained judgments per account, evaluated in parallel, composed
-					into a decision by ordinary code.
+					One thousand customer accounts, and a morning to work out which of
+					them to open. Six constrained judgments per account, evaluated in
+					parallel, composed into a decision by ordinary code.
 				</p>
 			</div>
 		</section>

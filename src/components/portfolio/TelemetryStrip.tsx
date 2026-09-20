@@ -62,7 +62,7 @@ export function TelemetryStrip({
 				)}
 			</Stat>
 			<Stat
-				label="AI judgments"
+				label="Jev judgments"
 				footnote={`${telemetry.questionsPerAccount} questions × ${count(telemetry.requests)} requests`}
 			>
 				{animate ? (
