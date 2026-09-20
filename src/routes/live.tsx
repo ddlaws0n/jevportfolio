@@ -93,12 +93,6 @@ function LiveRunner() {
 
 	useEffect(() => () => abortRef.current?.abort(), []);
 
-	// Follow the URL while nothing is in flight (back/forward, a shared link).
-	useEffect(() => {
-		if (state === "running") return;
-		setRunSize(search.size);
-	}, [search.size, state]);
-
 	const reset = useCallback(() => {
 		setError(null);
 		setDone(0);
@@ -215,20 +209,21 @@ function LiveRunner() {
 					<div>
 						<p className="label-caps mb-2">Accounts to triage</p>
 						{/* Locked while a run is in flight: the run was launched against
-						    one size, and letting it change would leave the counters and
-						    the cell grid measuring the run against a total it never had. */}
+						    one size, and the counters, the progress bar and the cell grid
+						    all measure it against that size, not against this control. */}
 						<div
 							aria-disabled={pending}
 							className={cn(pending && "pointer-events-none opacity-50")}
 						>
 							<Tabs
-								value={String(runSize)}
+								value={String(search.size)}
 								onValueChange={(value) => {
 									if (pending) return;
-									const size = Number(value) as (typeof LIVE_RUN_SIZES)[number];
-									setRunSize(size);
 									void navigate({
-										search: (prev) => ({ ...prev, size }),
+										search: (prev) => ({
+											...prev,
+											size: Number(value) as (typeof LIVE_RUN_SIZES)[number],
+										}),
 										replace: true,
 										resetScroll: false,
 									});
@@ -246,7 +241,7 @@ function LiveRunner() {
 						</div>
 					</div>
 					<p className="numeric text-xs text-muted-foreground">
-						{count(runSize * status.questionsPerAccount)} judgments ·{" "}
+						{count(search.size * status.questionsPerAccount)} judgments ·{" "}
 						{status.model} · concurrency {search.concurrency}
 					</p>
 				</div>
