@@ -35,11 +35,26 @@ export interface GridCell {
 	salesScore: number;
 }
 
+/**
+ * Generator intent against Jev's outcome, for the committed run. The
+ * "planted" scenarios are synthetic archetypes, not observed churn, so this is
+ * an evaluation-set summary rather than an accuracy claim.
+ */
+export interface EvaluationSummary {
+	/** Accounts the generator planted as needing a person. */
+	planted: number;
+	/** Planted problems that came back "act now" or "review". */
+	plantedSurfaced: number;
+	/** Deliberately quiet accounts that were flagged anyway. */
+	quietFlagged: number;
+}
+
 export interface PortfolioSnapshot {
 	available: boolean;
 	seed: number;
 	telemetry: Telemetry | null;
 	bands: BandCounts;
+	evaluation: EvaluationSummary;
 	cells: GridCell[];
 	/** Full detail for every account that lands on any lens's shortlist. */
 	shortlist: TriagedAccount[];

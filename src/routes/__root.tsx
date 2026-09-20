@@ -149,7 +149,16 @@ function SiteFooter() {
 					and the telemetry are real.
 				</p>
 				<p>
-					Built with{" "}
+					Built by{" "}
+					<a
+						className="font-medium text-foreground underline decoration-dotted underline-offset-4"
+						href="https://ddlawson.com"
+						target="_blank"
+						rel="noreferrer"
+					>
+						David Lawson
+					</a>{" "}
+					with{" "}
 					<a
 						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
 						href="https://typesafe.ai/"
@@ -158,32 +167,30 @@ function SiteFooter() {
 					>
 						TypeSafe Jev
 					</a>{" "}
-					by{" "}
-					<a
+					·{" "}
+					<Link
+						to="/methodology"
 						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
-						href="https://ddlawson.com"
-						target="_blank"
-						rel="noreferrer"
 					>
-						ddlawson
-					</a>{" "}
-					(say{" "}
-					<a
-						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
-						href="https://x.com/ddlaws0n"
-						target="_blank"
-						rel="noreferrer"
-					>
-						hello
-					</a>
-					) ·{" "}
+						Methodology
+					</Link>{" "}
+					·{" "}
 					<a
 						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
 						href="https://github.com/ddlaws0n/jevportfolio"
 						target="_blank"
 						rel="noreferrer"
 					>
-						Github
+						GitHub
+					</a>{" "}
+					·{" "}
+					<a
+						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
+						href="https://x.com/ddlaws0n"
+						target="_blank"
+						rel="noreferrer"
+					>
+						Say hello
 					</a>
 				</p>
 			</div>

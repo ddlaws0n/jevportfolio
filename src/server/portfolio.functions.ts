@@ -61,7 +61,7 @@ export const getAccountDetail = createServerFn({ method: "GET" })
 		return row;
 	});
 
-/** Ground truth vs. Jev, for the methodology page. */
+/** Generator intent vs. Jev, for the methodology page. */
 export const getMethodology = createServerFn({ method: "GET" }).handler(
 	async (): Promise<{
 		audit: ArchetypeAudit[];

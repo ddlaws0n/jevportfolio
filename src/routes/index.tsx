@@ -17,8 +17,11 @@ import { BandSummary } from "#/components/portfolio/BandSummary";
 import { PortfolioGrid } from "#/components/portfolio/PortfolioGrid";
 import { PriorityTable } from "#/components/portfolio/PriorityTable";
 import { TelemetryStrip } from "#/components/portfolio/TelemetryStrip";
-import { count, gbp } from "#/lib/format";
-import type { PortfolioSnapshot } from "#/lib/portfolio/baseline";
+import { count, gbp, seconds, usd } from "#/lib/format";
+import type {
+	EvaluationSummary,
+	PortfolioSnapshot,
+} from "#/lib/portfolio/baseline";
 import { PORTFOLIO_SIZE } from "#/lib/portfolio/generate";
 import { QUESTIONS_PER_ACCOUNT } from "#/lib/portfolio/questions";
 import {
@@ -29,7 +32,7 @@ import {
 	portfolioSearchSchema,
 } from "#/lib/portfolio/search";
 import { onLensShortlist } from "#/lib/portfolio/triage";
-import type { TriagedAccount } from "#/lib/portfolio/types";
+import type { Telemetry, TriagedAccount } from "#/lib/portfolio/types";
 import {
 	getAccountDetail,
 	getPortfolioSnapshot,
@@ -77,8 +80,7 @@ function Hero() {
 				</h1>
 				<p className="mt-4 max-w-2xl text-pretty text-lg text-muted-foreground">
 					One thousand customer accounts, and a morning to work out which of
-					them to open. Six constrained judgments per account, evaluated in
-					parallel, composed into a decision by ordinary code.
+					them to open. Press the button and see which ones surface.
 				</p>
 			</div>
 		</section>
@@ -230,19 +232,28 @@ function Portfolio({
 		: null;
 
 	const telemetry = snapshot.telemetry;
+	const surfaced = snapshot.bands["act-now"] + snapshot.bands.review;
 
 	return (
 		<>
 			<div className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-6">
 				<div className="flex flex-wrap items-end justify-between gap-4">
-					<div>
-						<p className="numeric text-5xl font-bold tracking-tight">
-							{count(snapshot.totals.accounts)}
-						</p>
-						<p className="label-caps mt-1">
-							accounts · {gbp(snapshot.totals.arrGbp)} ARR under management
-						</p>
-					</div>
+					{revealed ? (
+						<Result
+							surfaced={surfaced}
+							accounts={snapshot.totals.accounts}
+							telemetry={telemetry}
+						/>
+					) : (
+						<div>
+							<p className="numeric text-5xl font-bold tracking-tight">
+								{count(snapshot.totals.accounts)}
+							</p>
+							<p className="label-caps mt-1">
+								accounts · {gbp(snapshot.totals.arrGbp)} ARR under management
+							</p>
+						</div>
+					)}
 
 					{revealed ? (
 						<div className="flex flex-wrap items-center gap-3">
@@ -283,7 +294,10 @@ function Portfolio({
 										{new Date(telemetry.recordedAt).toISOString().slice(0, 10)}
 									</p>
 								</div>
-								<TelemetryStrip telemetry={telemetry} />
+								<div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.28fr)]">
+									<TelemetryStrip telemetry={telemetry} />
+									<EvaluationCard evaluation={snapshot.evaluation} />
+								</div>
 								<p className="mt-2 text-xs text-muted-foreground">
 									Measured, not estimated. Rebuilt by{" "}
 									<code className="rounded bg-card px-1 py-0.5 text-[11px]">
@@ -391,6 +405,82 @@ function Portfolio({
 	);
 }
 
+/**
+ * The payoff, before the mechanism. The visitor pressed the button and the
+ * first thing they should read is what came back — the telemetry and the six
+ * questions wait below.
+ */
+function Result({
+	surfaced,
+	accounts,
+	telemetry,
+}: {
+	surfaced: number;
+	accounts: number;
+	telemetry: Telemetry | null;
+}) {
+	return (
+		<div className="max-w-2xl">
+			<p className="text-balance text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+				<span className="numeric">{count(surfaced)}</span> of{" "}
+				<span className="numeric">{count(accounts)}</span> accounts deserve
+				attention.
+			</p>
+			{telemetry ? (
+				<p className="mt-2 text-pretty text-base text-muted-foreground sm:text-lg">
+					Jev found them with{" "}
+					<span className="numeric font-semibold text-foreground">
+						{count(telemetry.judgments)}
+					</span>{" "}
+					judgments in{" "}
+					<span className="numeric font-semibold text-foreground">
+						{seconds(telemetry.elapsedMs)}
+					</span>{" "}
+					for{" "}
+					<span className="numeric font-semibold text-foreground">
+						{usd(telemetry.estimatedCostUsd)}
+					</span>
+					.
+				</p>
+			) : null}
+		</div>
+	);
+}
+
+/**
+ * Cheap and fast is only interesting if it is also right. This sits beside the
+ * telemetry so the two are read together. The denominator is the generator's
+ * planted scenarios — a synthetic evaluation set, not observed churn.
+ */
+function EvaluationCard({ evaluation }: { evaluation: EvaluationSummary }) {
+	return (
+		<div className="flex flex-col justify-between gap-3 rounded-xl border border-primary/40 bg-primary/5 px-4 py-4 sm:px-6">
+			<div className="flex flex-col gap-1">
+				<span className="numeric text-2xl font-bold leading-none tracking-tight sm:text-3xl">
+					{count(evaluation.plantedSurfaced)}{" "}
+					<span className="text-muted-foreground">/</span>{" "}
+					{count(evaluation.planted)}
+				</span>
+				<span className="label-caps">planted issues surfaced</span>
+				<span className="text-[11px] text-muted-foreground/70">
+					{evaluation.quietFlagged === 0
+						? "no quiet accounts flagged"
+						: `${count(evaluation.quietFlagged)} quiet account${
+								evaluation.quietFlagged === 1 ? "" : "s"
+							} flagged`}{" "}
+					· synthetic evaluation set
+				</span>
+			</div>
+			<Link
+				to="/methodology"
+				className="text-xs text-primary underline decoration-dotted underline-offset-4"
+			>
+				See methodology →
+			</Link>
+		</div>
+	);
+}
+
 function WhatJustHappened() {
 	return (
 		<section className="rounded-xl border border-border/60 bg-card/50 p-6">
@@ -429,7 +519,7 @@ score 40 → "at risk"`}
 							to="/methodology"
 							className="text-primary underline decoration-dotted underline-offset-4"
 						>
-							See the six questions and the ground-truth audit →
+							See the six questions and the planted-scenario audit →
 						</Link>
 					</p>
 				</div>

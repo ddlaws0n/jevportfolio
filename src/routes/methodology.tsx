@@ -11,6 +11,7 @@ import {
 	CHOICE_CONFIDENCE_FLOOR,
 	PRIORITY_WEIGHTS,
 } from "#/lib/portfolio/triage";
+import { isPlantedProblem } from "#/lib/portfolio/types";
 import { getMethodology } from "#/server/portfolio.functions";
 
 export const Route = createFileRoute("/methodology")({
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/methodology")({
 			{
 				name: "description",
 				content:
-					"The exact six Jev questions, the deterministic scoring they feed, and an audit against the generator's ground truth.",
+					"The exact six Jev questions, the deterministic scoring they feed, and an audit against the scenarios the generator planted.",
 			},
 		],
 	}),
@@ -71,8 +72,7 @@ function Methodology() {
 		};
 	});
 
-	const isProblem = (archetype: string) =>
-		archetype !== "healthy" && archetype !== "healthy_noise";
+	const isProblem = (archetype: string) => isPlantedProblem(archetype);
 
 	// Counted off the audit rather than a literal 1,000: the portfolio size and
 	// the archetype mix are both constants that can move.
@@ -116,9 +116,9 @@ function Methodology() {
 					TypeSafe evaluates every question in a request against the same{" "}
 					<code className="rounded bg-card px-1 py-0.5">state</code> in
 					parallel, so six questions cost one round trip rather than six. The
-					account record goes over with its ground-truth archetype and its id
-					stripped out — the model never sees which bucket the generator drew it
-					from.
+					account record goes over with its planted archetype and its id
+					stripped out — the model never sees which scenario the generator drew
+					it from.
 				</p>
 				<pre className="numeric mt-4 overflow-x-auto rounded-lg border border-border/60 bg-card p-4 text-[11px] leading-relaxed">
 					{`POST https://api.typesafe.ai/v1/systemone
@@ -276,9 +276,9 @@ priorityScore =
 						notes are shorter, staler and more contradictory.
 					</li>
 					<li>
-						Ground truth here is the generator's intent, not a real outcome.
-						Nothing on this page shows whether a flagged account would actually
-						have churned.
+						The planted scenarios are generator intent, not observed outcomes.
+						This is a synthetic evaluation set: nothing on this page shows
+						whether a flagged account would actually have churned.
 					</li>
 					<li>
 						Typed output guarantees the interface, not the truth. Thresholds
