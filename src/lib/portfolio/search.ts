@@ -16,8 +16,10 @@ export type LensParam = z.infer<typeof lensSchema>;
 export const bandFilterSchema = z.enum(["all", "act-now", "review", "healthy"]);
 export type BandFilter = z.infer<typeof bandFilterSchema>;
 
-export const sortSchema = z.enum(["priority", "arr", "renewal"]);
+export const sortSchema = z.enum(["priority", "arr", "renewal", "none"]);
 export type SortParam = z.infer<typeof sortSchema>;
+export const sortOrderSchema = z.enum(["asc", "desc"]);
+export type SortOrder = z.infer<typeof sortOrderSchema>;
 
 // Every field carries a `.catch` as well as a `.default`: a `.default` only
 // covers a *missing* param, so without the catch a hand-typed `?lens=bogus`
@@ -32,6 +34,7 @@ export const portfolioSearchSchema = z.object({
 	/** Open the inspector on this account. */
 	account: z.string().regex(ACCOUNT_ID).optional().catch(undefined),
 	sort: sortSchema.default("priority").catch("priority"),
+	order: sortOrderSchema.default("desc").catch("desc"),
 });
 
 export type PortfolioSearch = z.infer<typeof portfolioSearchSchema>;
@@ -40,6 +43,7 @@ export const PORTFOLIO_SEARCH_DEFAULTS: PortfolioSearch = {
 	lens: "all",
 	band: "all",
 	sort: "priority",
+	order: "desc",
 	q: undefined,
 	account: undefined,
 };

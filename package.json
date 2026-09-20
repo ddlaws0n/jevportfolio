@@ -17,6 +17,7 @@
     "baseline": "bun run scripts/build-baseline.ts",
     "baseline:op": "op run --env-file .env.op -- bun run scripts/build-baseline.ts",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "audit": "bun run scripts/audit-baseline.ts"
   },
   "dependencies": {

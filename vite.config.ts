@@ -15,9 +15,9 @@ const config = defineConfig({
 			// only apply once it has.
 			vercel: {
 				functions: {
-					// The live-run server function streams for as long as the triage
-					// takes. 1,000 accounts at the default concurrency lands in ~20s.
-					maxDuration: 60,
+					// Three 1,000-account runs share 18 req/s: allow ~167s plus
+					// response latency and retries rather than killing them at 60s.
+					maxDuration: 300,
 					supportsResponseStreaming: true,
 				},
 			},

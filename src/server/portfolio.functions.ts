@@ -157,38 +157,37 @@ export const streamLiveTriage = createServerFn({ method: "POST" })
 			return;
 		}
 
-		// Stop paying for a run the visitor has already navigated away from.
-		const signal = getRequest().signal;
-		const accounts = generatePortfolio(data.seed).slice(0, data.size);
-
-		yield {
-			type: "start",
-			total: accounts.length,
-			concurrency: data.concurrency,
-			model: JEV_MODEL,
-		};
-
-		let done = 0;
 		let inputTokens = 0;
-		let outputTokens = 0;
-		let failures = 0;
-		let succeeded = 0;
-		let model = JEV_MODEL;
-		const rows: TriagedAccount[] = [];
-		let pending: ProgressResult[] = [];
-
-		const startedAt = performance.now();
-		// Batch frames so a 1,000-account run does not emit 1,000 chunks.
-		const frameSize = Math.max(5, Math.round(accounts.length / 60));
-
+		// Enter the lease's cleanup scope before setup or the first yield. A
+		// disconnect immediately after "start" must release the reservation too.
 		try {
+			// Stop paying for a run the visitor has already navigated away from.
+			const signal = getRequest().signal;
+			const accounts = generatePortfolio(data.seed).slice(0, data.size);
+
+			yield {
+				type: "start",
+				total: accounts.length,
+				concurrency: data.concurrency,
+				model: JEV_MODEL,
+			};
+
+			let done = 0;
+			let outputTokens = 0;
+			let failures = 0;
+			let succeeded = 0;
+			let model = JEV_MODEL;
+			const rows: TriagedAccount[] = [];
+			let pending: ProgressResult[] = [];
+
+			const startedAt = performance.now();
+			// Batch frames so a 1,000-account run does not emit 1,000 chunks.
+			const frameSize = Math.max(5, Math.round(accounts.length / 60));
+
 			for await (const outcome of runTriage(accounts, {
 				concurrency: data.concurrency,
-				// Ask for a request rate matching the worker count — the workers are
-				// what issue requests, so a lower ceiling would just idle them. This is
-				// a request, not a grant: `runTriage` clamps it to
-				// `MAX_REQUESTS_PER_SECOND`, because `concurrency` comes from the URL
-				// and the published per-minute cap is not the visitor's to raise.
+				// Local pacing follows the worker count, but the shared SDK
+				// transport limiter caps all runs and retries on this instance.
 				requestsPerSecond: data.concurrency,
 				signal,
 			})) {
