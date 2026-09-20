@@ -148,15 +148,42 @@ function SiteFooter() {
 					Synthetic data. No real customers, no CRM, no database. The judgments
 					and the telemetry are real.
 				</p>
-				<p className="numeric">
-					TanStack Start · Bun ·{" "}
+				<p>
+					Built with{" "}
 					<a
 						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
-						href="https://docs.typesafe.ai"
+						href="https://typesafe.ai/"
 						target="_blank"
 						rel="noreferrer"
 					>
 						TypeSafe Jev
+					</a>{" "}
+					by{" "}
+					<a
+						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
+						href="https://ddlawson.com"
+						target="_blank"
+						rel="noreferrer"
+					>
+						ddlawson
+					</a>{" "}
+					(say{" "}
+					<a
+						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
+						href="https://x.com/ddlaws0n"
+						target="_blank"
+						rel="noreferrer"
+					>
+						hello
+					</a>
+					) ·{" "}
+					<a
+						className="underline decoration-dotted underline-offset-4 hover:text-foreground"
+						href="https://github.com/ddlaws0n/jevportfolio"
+						target="_blank"
+						rel="noreferrer"
+					>
+						Github
 					</a>
 				</p>
 			</div>
