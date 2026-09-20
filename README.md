@@ -144,6 +144,9 @@ the **Live run** page needs one.
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run check` | Biome lint + format |
 
+The social card at `public/og.png` is rendered from `scripts/og-card.html`; open
+that file in a 1200×630 viewport and screenshot it after changing the numbers.
+
 Re-recording the whole portfolio costs about eight cents:
 
 ```sh
@@ -164,6 +167,7 @@ Useful flags: `--limit`, `--concurrency`, `--rps`, `--seed`.
 | `TYPESAFE_DEFAULT_MODEL` | Optional. Defaults to `jev-latest` |
 | `LIVE_RUN_BUDGET_USD_PER_HOUR` | Optional. Caps public live-run spend per instance per hour. Default `2` |
 | `LIVE_RUN_MAX_CONCURRENT` | Optional. Simultaneous live runs per instance. Default `3` |
+| `VITE_SITE_URL` | Public. Absolute origin used for `og:image` and `og:url` |
 
 The live-run button is public and spends real money, so
 `src/server/budget.server.ts` holds an in-memory hourly spend window and refuses

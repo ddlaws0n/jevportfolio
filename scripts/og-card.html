@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: oklch(0.145 0.013 265);
+    --fg: oklch(0.945 0.006 250);
+    --muted: oklch(0.645 0.018 258);
+    --border: oklch(0.285 0.016 264);
+    --primary: oklch(0.79 0.148 191);
+    --act: oklch(0.655 0.213 24);
+    --review: oklch(0.796 0.149 72);
+    --idle: oklch(0.29 0.014 264);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Inter, system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: 56px 64px;
+    background-image: radial-gradient(ellipse 70% 50% at 50% -15%, color-mix(in oklab, var(--primary) 16%, transparent), transparent 70%);
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .kicker { font-family: "JetBrains Mono", monospace; font-size: 15px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: 56px; line-height: 1.04; letter-spacing: -0.03em; font-weight: 700; margin-top: 16px; max-width: 900px; }
+  .grid { display: grid; grid-template-columns: repeat(50, 1fr); gap: 4px; margin-top: 28px; }
+  .grid span { aspect-ratio: 1; border-radius: 2px; background: var(--idle); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 30px; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .stat { padding: 18px 22px; border-right: 1px solid var(--border); background: color-mix(in oklab, var(--bg) 60%, #fff 4%); }
+  .stat:last-child { border-right: 0; }
+  .stat b { display: block; font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+  .stat small { display: block; margin-top: 6px; font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 22px; font-size: 15px; color: var(--muted); }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--fg); font-weight: 600; }
+  .brand i { display: block; width: 24px; height: 24px; border-radius: 7px; background: color-mix(in oklab, var(--primary) 18%, transparent); position: relative; }
+  .brand i::after { content: ""; position: absolute; inset: 8px; border-radius: 2px; background: var(--primary); }
+</style>
+</head>
+<body>
+  <p class="kicker">1,000 accounts &middot; 6,000 AI judgments &middot; one Monday morning</p>
+  <h1>It&rsquo;s Monday. 181 of your 1,000 customers need you.</h1>
+  <div class="grid" id="grid"></div>
+  <div class="stats">
+    <div class="stat"><b>1,000</b><small>Accounts</small></div>
+    <div class="stat"><b>6,000</b><small>AI judgments</small></div>
+    <div class="stat"><b>9.37s</b><small>Wall clock</small></div>
+    <div class="stat"><b>$0.0775</b><small>Cost</small></div>
+  </div>
+  <footer>
+    <span class="brand"><i></i>1000 Accounts</span>
+    <span class="mono">Powered by TypeSafe Jev</span>
+  </footer>
+<script>
+  // The real 45/136 split, scaled to 300 squares and scattered with a fixed
+  // seed so the picture matches the site.
+  const total = 300, act = 14, review = 41;
+  let a = 42;
+  const rnd = () => {
+    a = (a * 1664525 + 1013904223) >>> 0;
+    return a / 4294967296;
+  };
+  const cells = Array.from({ length: total }, () => "idle");
+  let placed = 0;
+  while (placed < act) { const i = Math.floor(rnd() * total); if (cells[i] === "idle") { cells[i] = "act"; placed++; } }
+  placed = 0;
+  while (placed < review) { const i = Math.floor(rnd() * total); if (cells[i] === "idle") { cells[i] = "review"; placed++; } }
+  const g = document.getElementById("grid");
+  for (const c of cells) {
+    const s = document.createElement("span");
+    if (c === "act") s.style.background = "var(--act)";
+    if (c === "review") s.style.background = "var(--review)";
+    g.appendChild(s);
+  }
+</script>
+</body>
+</html>

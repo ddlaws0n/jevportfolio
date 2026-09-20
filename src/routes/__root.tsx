@@ -11,6 +11,17 @@ const TITLE = "1000 Accounts — portfolio triage with Jev";
 const DESCRIPTION =
 	"1,000 synthetic customer accounts. 6,000 constrained AI judgments from TypeSafe's Jev. Software keeps the final decision.";
 
+/**
+ * Social cards need absolute URLs, and the deployment does not know its own
+ * public origin at build time. `VITE_SITE_URL` is public by design — it is the
+ * address of this page.
+ */
+const SITE_URL = (
+	import.meta.env.VITE_SITE_URL ?? "https://jevportfolio-three.vercel.app"
+).replace(/\/$/, "");
+
+const OG_IMAGE = `${SITE_URL}/og.png`;
+
 export const Route = createRootRoute({
 	head: () => ({
 		meta: [
@@ -19,15 +30,27 @@ export const Route = createRootRoute({
 			{ title: TITLE },
 			{ name: "description", content: DESCRIPTION },
 			{ name: "theme-color", content: "#131418" },
+			{ property: "og:site_name", content: "1000 Accounts" },
 			{ property: "og:title", content: TITLE },
 			{ property: "og:description", content: DESCRIPTION },
 			{ property: "og:type", content: "website" },
+			{ property: "og:url", content: SITE_URL },
+			{ property: "og:image", content: OG_IMAGE },
+			{ property: "og:image:width", content: "1200" },
+			{ property: "og:image:height", content: "630" },
+			{
+				property: "og:image:alt",
+				content:
+					"A grid of 1,000 account squares with 181 highlighted, above the measured run: 1,000 accounts, 6,000 AI judgments, 9.37 seconds, $0.0775.",
+			},
 			{ name: "twitter:card", content: "summary_large_image" },
 			{ name: "twitter:title", content: TITLE },
 			{ name: "twitter:description", content: DESCRIPTION },
+			{ name: "twitter:image", content: OG_IMAGE },
 		],
 		links: [
 			{ rel: "stylesheet", href: appCss },
+			{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
 			{ rel: "preconnect", href: "https://fonts.googleapis.com" },
 			{
 				rel: "preconnect",
