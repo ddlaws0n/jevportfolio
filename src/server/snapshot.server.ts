@@ -10,6 +10,7 @@
 import rawBaseline from "#/data/baseline.json" with { type: "json" };
 import type {
 	Baseline,
+	EvaluationSummary,
 	GridCell,
 	PortfolioSnapshot,
 } from "#/lib/portfolio/baseline";
@@ -19,7 +20,11 @@ import {
 	LENS_THRESHOLD,
 	triageAccount,
 } from "#/lib/portfolio/triage";
-import type { AccountJudgments, TriagedAccount } from "#/lib/portfolio/types";
+import {
+	type AccountJudgments,
+	isPlantedProblem,
+	type TriagedAccount,
+} from "#/lib/portfolio/types";
 
 const baseline = rawBaseline as unknown as Baseline;
 
@@ -72,6 +77,7 @@ function build() {
 		seed: baseline.seed,
 		telemetry: baseline.telemetry,
 		bands: countBands(rows),
+		evaluation: summarizeEvaluation(rows),
 		cells,
 		shortlist,
 		totals: {
@@ -89,6 +95,29 @@ function build() {
 	return memo;
 }
 
+/**
+ * Planted scenarios against outcomes. Counted off the rows rather than typed in,
+ * so a re-run of the baseline or a threshold change moves the number on the
+ * page.
+ */
+export function summarizeEvaluation(
+	rows: readonly TriagedAccount[],
+): EvaluationSummary {
+	let planted = 0;
+	let plantedSurfaced = 0;
+	let quietFlagged = 0;
+	for (const row of rows) {
+		const flagged = row.band !== "healthy";
+		if (isPlantedProblem(row.account.archetype)) {
+			planted += 1;
+			if (flagged) plantedSurfaced += 1;
+		} else if (flagged) {
+			quietFlagged += 1;
+		}
+	}
+	return { planted, plantedSurfaced, quietFlagged };
+}
+
 export function getSnapshot(): PortfolioSnapshot {
 	return build().snapshot;
 }
@@ -101,7 +130,7 @@ export function findTriagedAccount(accountId: string): TriagedAccount | null {
 	return build().rows.find((row) => row.account.id === accountId) ?? null;
 }
 
-/** Ground truth vs. what Jev found, for the methodology page. */
+/** Generator intent vs. what Jev found, per archetype, for the methodology page. */
 export interface ArchetypeAudit {
 	archetype: string;
 	planted: number;

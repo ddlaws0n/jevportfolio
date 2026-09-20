@@ -18,6 +18,19 @@ export const ARCHETYPES = [
 
 export type Archetype = (typeof ARCHETYPES)[number];
 
+/**
+ * The archetypes the generator planted as problems a person should look at.
+ * The two healthy variants are the deliberately quiet accounts.
+ */
+export const QUIET_ARCHETYPES: readonly Archetype[] = [
+	"healthy",
+	"healthy_noise",
+];
+
+export function isPlantedProblem(archetype: string): boolean {
+	return !(QUIET_ARCHETYPES as readonly string[]).includes(archetype);
+}
+
 export type Segment = "Enterprise" | "Mid-Market" | "SMB";
 
 export interface AccountSupport {
@@ -62,9 +75,9 @@ export interface Account {
 	commercial: AccountCommercial;
 	notes: string[];
 	/**
-	 * Ground truth from the generator. Never sent to Jev — it exists only so the
-	 * methodology page can compare what the generator planted against what Jev
-	 * actually found.
+	 * Generator intent. Never sent to Jev — it exists only so the methodology
+	 * page can compare the scenario the generator planted against what Jev
+	 * actually found. It is a synthetic label, not an observed outcome.
 	 */
 	archetype: Archetype;
 }

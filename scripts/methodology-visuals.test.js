@@ -6,7 +6,8 @@ import { ArchetypeAuditChart } from "../src/components/portfolio/ArchetypeAuditC
 import { MethodologyFlow } from "../src/components/portfolio/MethodologyFlow";
 import { pct, titleCase } from "../src/lib/format";
 import { QUESTION_IDS, QUESTION_META } from "../src/lib/portfolio/questions";
-import { getArchetypeAudit } from "../src/server/snapshot.server";
+import { isPlantedProblem } from "../src/lib/portfolio/types";
+import { getArchetypeAudit, getSnapshot } from "../src/server/snapshot.server";
 
 const example = {
 	archetype: "example",
@@ -95,4 +96,26 @@ test("pipeline is an ordered explanation of the actual question contract", () =>
 	expect(html).toContain("triage.ts");
 	expect(html).toContain("No more inference.");
 	expect(html).not.toContain("calibrated");
+});
+
+test("home-page evaluation summary agrees with the archetype audit", () => {
+	const { evaluation, bands } = getSnapshot();
+	const audit = getArchetypeAudit();
+	const problems = audit.filter((row) => isPlantedProblem(row.archetype));
+	const quiet = audit.filter((row) => !isPlantedProblem(row.archetype));
+	const sum = (rows, pick) => rows.reduce((total, row) => total + pick(row), 0);
+
+	expect(evaluation.planted).toBe(sum(problems, (row) => row.planted));
+	expect(evaluation.plantedSurfaced).toBe(
+		sum(problems, (row) => row.actNow + row.review),
+	);
+	expect(evaluation.quietFlagged).toBe(
+		sum(quiet, (row) => row.actNow + row.review),
+	);
+	// Everything flagged is either a planted problem found or a quiet account
+	// flagged, so the two numbers must add up to the surfaced bands.
+	expect(evaluation.plantedSurfaced + evaluation.quietFlagged).toBe(
+		bands["act-now"] + bands.review,
+	);
+	expect(evaluation.plantedSurfaced).toBeLessThanOrEqual(evaluation.planted);
 });
