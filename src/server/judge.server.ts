@@ -28,6 +28,13 @@ import { createTypeSafeClient } from "#/server/typesafe.server";
 export const DEFAULT_CONCURRENCY = 32;
 /** Jev's published cap is 1,200 requests/minute. Stay comfortably under it. */
 export const DEFAULT_REQUESTS_PER_SECOND = 18;
+/**
+ * The ceiling the limiter enforces whatever a caller asks for. The live runner
+ * derives its request rate from a visitor-supplied concurrency, so the cap has
+ * to live here rather than at each call site — otherwise `?concurrency=120`
+ * would put the deployment six times over the published per-minute limit.
+ */
+export const MAX_REQUESTS_PER_SECOND = 18;
 
 export interface JudgeOutcome {
 	account: Account;
@@ -205,7 +212,10 @@ export async function* runTriage(
 ): AsyncGenerator<JudgeOutcome> {
 	const concurrency = Math.max(1, options.concurrency ?? DEFAULT_CONCURRENCY);
 	const take = rateLimiter(
-		options.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND,
+		Math.min(
+			MAX_REQUESTS_PER_SECOND,
+			Math.max(1, options.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND),
+		),
 	);
 	const client = createTypeSafeClient();
 

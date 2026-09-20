@@ -16,18 +16,34 @@ const HOUR_MS = 60 * 60 * 1000;
 /** Measured from the recorded baseline: ~1,845 input tokens per account. */
 export const TOKENS_PER_ACCOUNT = 1845;
 
+/**
+ * `Number("")` is 0, so an env var that is present but blank would read as a
+ * budget of zero and disable the button rather than fall back to the default.
+ */
+function envNumber(name: string, fallback: number, min: number): number {
+	const raw = process.env[name];
+	if (raw === undefined || raw.trim() === "") return fallback;
+	const value = Number(raw);
+	return Number.isFinite(value) && value >= min ? value : fallback;
+}
+
 function budgetUsdPerHour(): number {
-	const raw = Number(process.env.LIVE_RUN_BUDGET_USD_PER_HOUR);
-	return Number.isFinite(raw) && raw >= 0 ? raw : 2;
+	return envNumber("LIVE_RUN_BUDGET_USD_PER_HOUR", 2, 0);
 }
 
 function maxConcurrentRuns(): number {
-	const raw = Number(process.env.LIVE_RUN_MAX_CONCURRENT);
-	return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : 3;
+	return Math.floor(envNumber("LIVE_RUN_MAX_CONCURRENT", 3, 1));
 }
 
 const spend: Array<{ at: number; usd: number }> = [];
 let activeRuns = 0;
+/**
+ * What the in-flight runs are expected to cost. Spend is only recorded when a
+ * run ends, so without this every concurrent run would check itself against a
+ * window that knows nothing about the others and the cap would be beatable by
+ * exactly `maxConcurrentRuns()` times over.
+ */
+let reservedUsd = 0;
 
 function prune(now: number) {
 	while (spend.length > 0 && now - spend[0].at > HOUR_MS) spend.shift();
@@ -72,18 +88,20 @@ export function reserveRun(
 	const budget = budgetUsdPerHour();
 	const projected = estimateCostUsd(accountCount * TOKENS_PER_ACCOUNT);
 	const alreadySpent = spentLastHourUsd();
+	const committed = alreadySpent + reservedUsd;
 
-	if (alreadySpent + projected > budget) {
+	if (committed + projected > budget) {
 		return {
 			ok: false,
 			reason:
-				`This deployment caps live runs at $${budget.toFixed(2)} per hour and has already spent ` +
-				`$${alreadySpent.toFixed(4)}. Try a smaller run, or read the recorded baseline on the portfolio page — ` +
+				`This deployment caps live runs at $${budget.toFixed(2)} per hour and has already committed ` +
+				`$${committed.toFixed(4)}. Try a smaller run, or read the recorded baseline on the portfolio page — ` +
 				"it is a real 1,000-account run.",
 		};
 	}
 
 	activeRuns += 1;
+	reservedUsd += projected;
 	let released = false;
 	return {
 		ok: true,
@@ -92,6 +110,9 @@ export function reserveRun(
 				if (released) return;
 				released = true;
 				activeRuns = Math.max(0, activeRuns - 1);
+				// The real spend is recorded separately by the caller, so the
+				// projection has to come back off the moment the run is over.
+				reservedUsd = Math.max(0, reservedUsd - projected);
 			},
 		},
 	};

@@ -114,7 +114,10 @@ export interface ArchetypeAudit {
 	avgUrgency: number;
 }
 
+let auditMemo: ArchetypeAudit[] | null = null;
+
 export function getArchetypeAudit(): ArchetypeAudit[] {
+	if (auditMemo) return auditMemo;
 	const byArchetype = new Map<string, ArchetypeAudit>();
 
 	for (const row of build().rows) {
@@ -155,7 +158,8 @@ export function getArchetypeAudit(): ArchetypeAudit[] {
 		"ambiguous",
 	];
 
-	return [...byArchetype.values()]
+	// The baseline is immutable, so this only has to be walked once per instance.
+	auditMemo = [...byArchetype.values()]
 		.map((entry) => ({
 			...entry,
 			avgNeedsAttention: entry.avgNeedsAttention / entry.planted,
@@ -164,4 +168,5 @@ export function getArchetypeAudit(): ArchetypeAudit[] {
 			avgUrgency: entry.avgUrgency / entry.planted,
 		}))
 		.sort((a, b) => order.indexOf(a.archetype) - order.indexOf(b.archetype));
+	return auditMemo;
 }

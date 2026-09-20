@@ -5,6 +5,7 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 
+import { PORTFOLIO_SEARCH_DEFAULTS } from "#/lib/portfolio/search";
 import appCss from "#/styles.css?url";
 
 const TITLE = "1000 Accounts — portfolio triage with Jev";
@@ -16,8 +17,11 @@ const DESCRIPTION =
  * public origin at build time. `VITE_SITE_URL` is public by design — it is the
  * address of this page.
  */
+const FALLBACK_SITE_URL = "https://jevportfolio-three.vercel.app";
+// An env var that is defined but blank survives `??`, and a blank origin makes
+// `og:image` relative — which no social card scraper will resolve.
 const SITE_URL = (
-	import.meta.env.VITE_SITE_URL ?? "https://jevportfolio-three.vercel.app"
+	import.meta.env.VITE_SITE_URL?.trim() || FALLBACK_SITE_URL
 ).replace(/\/$/, "");
 
 const OG_IMAGE = `${SITE_URL}/og.png`;
@@ -91,7 +95,7 @@ function SiteHeader() {
 			<div className="mx-auto flex h-14 w-full max-w-[1400px] items-center gap-6 px-4 sm:px-6">
 				<Link
 					to="/"
-					search={{ lens: "all", band: "all", sort: "priority" }}
+					search={PORTFOLIO_SEARCH_DEFAULTS}
 					className="flex items-center gap-2.5 text-sm font-semibold tracking-tight"
 				>
 					<span className="grid h-6 w-6 place-items-center rounded-md bg-primary/15 text-primary">
@@ -170,7 +174,7 @@ function NotFound() {
 			</p>
 			<Link
 				to="/"
-				search={{ lens: "all", band: "all", sort: "priority" }}
+				search={PORTFOLIO_SEARCH_DEFAULTS}
 				className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
 			>
 				Back to the portfolio

@@ -12,8 +12,9 @@ import { getRequest, setResponseHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 import type { PortfolioSnapshot } from "#/lib/portfolio/baseline";
-import { generatePortfolio } from "#/lib/portfolio/generate";
+import { generatePortfolio, PORTFOLIO_SIZE } from "#/lib/portfolio/generate";
 import { JEV_MODEL, QUESTIONS_PER_ACCOUNT } from "#/lib/portfolio/questions";
+import { ACCOUNT_ID } from "#/lib/portfolio/search";
 import { countBands, triageAccount } from "#/lib/portfolio/triage";
 import type {
 	Telemetry,
@@ -47,7 +48,7 @@ export const getPortfolioSnapshot = createServerFn({ method: "GET" }).handler(
 const accountIdSchema = z.object({
 	accountId: z
 		.string()
-		.regex(/^ACC-\d{4}$/, "Expected an account id like ACC-0138"),
+		.regex(ACCOUNT_ID, "Expected an account id like ACC-0138"),
 });
 
 /** Full detail for one account: inputs, raw judgments, derived scores. */
@@ -67,6 +68,14 @@ export const getMethodology = createServerFn({ method: "GET" }).handler(
 		telemetry: Telemetry | null;
 		bands: ReturnType<typeof countBands>;
 	}> => {
+		// Derived entirely from the committed baseline, so it is as cacheable as
+		// the snapshot itself.
+		setResponseHeaders(
+			new Headers({
+				"Cache-Control": "public, max-age=300",
+				"CDN-Cache-Control": "max-age=3600, stale-while-revalidate=86400",
+			}),
+		);
 		const snapshot = getSnapshot();
 		return {
 			audit: getArchetypeAudit(),
@@ -76,35 +85,28 @@ export const getMethodology = createServerFn({ method: "GET" }).handler(
 	},
 );
 
-/** What the live runner page needs before the visitor presses anything. */
-export const getRunnerStatus = createServerFn({ method: "GET" })
-	.validator(
-		z.object({
-			seed: z
-				.number()
-				.int()
-				.min(0)
-				.max(2 ** 31 - 1)
-				.default(42),
-		}),
-	)
-	.handler(
-		async ({
-			data,
-		}): Promise<{
-			liveRunAvailable: boolean;
-			model: string;
-			questionsPerAccount: number;
-			portfolioSize: number;
-			baselineTelemetry: Telemetry | null;
-		}> => ({
-			liveRunAvailable: hasApiKey(),
-			model: JEV_MODEL,
-			questionsPerAccount: QUESTIONS_PER_ACCOUNT,
-			portfolioSize: generatePortfolio(data.seed).length,
-			baselineTelemetry: getSnapshot().telemetry,
-		}),
-	);
+/**
+ * What the live runner page needs before the visitor presses anything.
+ *
+ * Takes no seed: the portfolio is the same size for every one of them, and
+ * building 1,000 accounts per distinct seed would let an unauthenticated caller
+ * burn CPU and evict the generator's cache at will.
+ */
+export const getRunnerStatus = createServerFn({ method: "GET" }).handler(
+	async (): Promise<{
+		liveRunAvailable: boolean;
+		model: string;
+		questionsPerAccount: number;
+		portfolioSize: number;
+		baselineTelemetry: Telemetry | null;
+	}> => ({
+		liveRunAvailable: hasApiKey(),
+		model: JEV_MODEL,
+		questionsPerAccount: QUESTIONS_PER_ACCOUNT,
+		portfolioSize: PORTFOLIO_SIZE,
+		baselineTelemetry: getSnapshot().telemetry,
+	}),
+);
 
 export const liveRunSchema = z.object({
 	size: z.union([
@@ -182,8 +184,11 @@ export const streamLiveTriage = createServerFn({ method: "POST" })
 		try {
 			for await (const outcome of runTriage(accounts, {
 				concurrency: data.concurrency,
-				// Match the request rate to the worker count: the workers are what
-				// actually issue requests, so a lower ceiling would just idle them.
+				// Ask for a request rate matching the worker count — the workers are
+				// what issue requests, so a lower ceiling would just idle them. This is
+				// a request, not a grant: `runTriage` clamps it to
+				// `MAX_REQUESTS_PER_SECOND`, because `concurrency` comes from the URL
+				// and the published per-minute cap is not the visitor's to raise.
 				requestsPerSecond: data.concurrency,
 				signal,
 			})) {

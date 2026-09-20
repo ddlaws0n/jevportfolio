@@ -72,6 +72,9 @@ function Methodology() {
 	const isProblem = (archetype: string) =>
 		archetype !== "healthy" && archetype !== "healthy_noise";
 
+	// Counted off the audit rather than a literal 1,000: the portfolio size and
+	// the archetype mix are both constants that can move.
+	const totalAccounts = audit.reduce((total, row) => total + row.planted, 0);
 	const planted = audit
 		.filter((row) => isProblem(row.archetype))
 		.reduce((total, row) => total + row.planted, 0);
@@ -168,7 +171,7 @@ priorityScore =
 					</span>{" "}
 					accounts that should need attention and{" "}
 					<span className="font-semibold text-foreground">
-						{count(1000 - planted)}
+						{count(totalAccounts - planted)}
 					</span>{" "}
 					that should not. The triage surfaced{" "}
 					<span className="font-semibold text-foreground">

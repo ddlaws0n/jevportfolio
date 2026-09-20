@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 
 import { Tooltip } from "#/components/motion/tooltip";
 import { gbp } from "#/lib/format";
@@ -87,7 +87,12 @@ export function PortfolioGrid({
 	selectedId,
 	onSelect,
 }: PortfolioGridProps) {
-	const anchorRef = useRef<HTMLElement | null>(null);
+	// The anchor is state, not a ref: `Tooltip` re-places from a layout effect
+	// keyed on the identity of the ref object it was handed, so mutating one ref
+	// in place would leave the tooltip pinned to the first square the pointer
+	// touched while its contents changed underneath.
+	const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+	const anchorRef = useMemo(() => ({ current: anchor }), [anchor]);
 	const [hovered, setHovered] = useState<GridCell | null>(null);
 
 	const normalisedQuery = (query ?? "").trim().toLowerCase();
@@ -121,9 +126,15 @@ export function PortfolioGrid({
 		[byId],
 	);
 
-	const visible = cells.filter((cell) =>
-		matches(cell, band, normalisedQuery),
-	).length;
+	const visible = useMemo(
+		() =>
+			cells.reduce(
+				(total, cell) =>
+					matches(cell, band, normalisedQuery) ? total + 1 : total,
+				0,
+			),
+		[cells, band, normalisedQuery],
+	);
 
 	return (
 		<div className="relative">
@@ -144,7 +155,7 @@ export function PortfolioGrid({
 				onPointerOver={(event) => {
 					const hit = resolve(event.target);
 					if (!hit) return;
-					anchorRef.current = hit.el;
+					setAnchor(hit.el);
 					setHovered(hit.cell);
 				}}
 				onPointerLeave={() => setHovered(null)}

@@ -1,6 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { Table, type TableColumn } from "#/components/motion/table";
+import {
+	type SortState,
+	Table,
+	type TableColumn,
+} from "#/components/motion/table";
 import { gbp, pct, titleCase } from "#/lib/format";
 import type { SortParam } from "#/lib/portfolio/search";
 import { BAND_META, type Lens } from "#/lib/portfolio/triage";
@@ -37,8 +41,9 @@ const SORT_PARAM: Record<string, SortParam> = {
  * The keyboard-navigable view of the grid. Sorting and filtering happen over
  * already-computed numbers, so changing the question never costs an API call.
  *
- * The table owns its sort state; the three sorts worth putting in a shareable
- * link are seeded from and mirrored back to the URL, and the rest stay local.
+ * The three sorts worth putting in a shareable link are driven by the URL and
+ * mirrored back to it; the rest stay local. Sort state is held here rather than
+ * seeded through `defaultSort`, which the table reads only once at mount.
  */
 export function PriorityTable({
 	rows,
@@ -55,6 +60,23 @@ export function PriorityTable({
 	onSelect: (accountId: string) => void;
 	height?: number;
 }) {
+	const [tableSort, setTableSort] = useState<SortState | null>(() => ({
+		key: SORT_KEY[sort],
+		direction: "desc",
+	}));
+
+	// `defaultSort` is read once, at mount, so on its own the table would ignore
+	// every later move of the URL — the back button, a shared link opened over
+	// this one, the `replace` navigation the lens tabs do. Follow the URL when it
+	// names a different sort, and leave a purely local sort alone.
+	useEffect(() => {
+		setTableSort((current) =>
+			current && SORT_PARAM[current.key] === sort
+				? current
+				: { key: SORT_KEY[sort], direction: "desc" },
+		);
+	}, [sort]);
+
 	const columns = useMemo<TableColumn<TriagedAccount>[]>(() => {
 		const scoreKey =
 			lens === "risk"
@@ -195,10 +217,11 @@ export function PriorityTable({
 			data={rows}
 			columns={columns}
 			getRowId={(row) => row.account.id}
-			defaultSort={{ key: SORT_KEY[sort], direction: "desc" }}
+			sort={tableSort}
 			onSortChange={(next) => {
+				setTableSort(next);
 				const mapped = next ? SORT_PARAM[next.key] : undefined;
-				if (mapped) onSortChange(mapped);
+				if (mapped && mapped !== sort) onSortChange(mapped);
 			}}
 			rowHeight={52}
 			height={height}

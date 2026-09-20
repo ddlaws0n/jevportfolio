@@ -20,12 +20,15 @@ import { TelemetryStrip } from "#/components/portfolio/TelemetryStrip";
 import { count, gbp } from "#/lib/format";
 import type { PortfolioSnapshot } from "#/lib/portfolio/baseline";
 import { PORTFOLIO_SIZE } from "#/lib/portfolio/generate";
+import { QUESTIONS_PER_ACCOUNT } from "#/lib/portfolio/questions";
 import {
 	type BandFilter,
+	type LensParam,
+	LIVE_SEARCH_DEFAULTS,
 	PORTFOLIO_SEARCH_DEFAULTS,
 	portfolioSearchSchema,
 } from "#/lib/portfolio/search";
-import { type Lens, onLensShortlist } from "#/lib/portfolio/triage";
+import { onLensShortlist } from "#/lib/portfolio/triage";
 import type { TriagedAccount } from "#/lib/portfolio/types";
 import {
 	getAccountDetail,
@@ -162,6 +165,22 @@ function Portfolio({
 		[setSearch],
 	);
 
+	// The box is local and the URL follows it, because a navigation per keystroke
+	// re-validates the search params and re-derives every one of the 1,000 grid
+	// tones for a query the visitor is still halfway through typing.
+	const [queryDraft, setQueryDraft] = useState(search.q ?? "");
+	useEffect(() => {
+		setQueryDraft((draft) =>
+			(draft.trim() || undefined) === search.q ? draft : (search.q ?? ""),
+		);
+	}, [search.q]);
+	useEffect(() => {
+		const next = queryDraft.trim() || undefined;
+		if (next === search.q) return;
+		const timer = setTimeout(() => setSearch({ q: next }), 200);
+		return () => clearTimeout(timer);
+	}, [queryDraft, search.q, setSearch]);
+
 	// The 181 accounts on a shortlist ship with the page. Everything else is one
 	// typed server-function call away.
 	useEffect(() => {
@@ -189,16 +208,18 @@ function Portfolio({
 		}
 	}, [search.account, search.lens, search.band]);
 
-	const lens = search.lens as Lens;
+	const lens = search.lens;
 
 	const tableRows = useMemo(() => {
 		const query = (search.q ?? "").trim().toLowerCase();
 		return snapshot.shortlist.filter((row) => {
-			if (lens !== "all" && !onLensShortlist(row, lens)) return false;
-			if (lens === "all" && row.band === "healthy") return false;
+			if (!onLensShortlist(row, lens)) return false;
 			if (search.band !== "all" && row.band !== search.band) return false;
 			if (!query) return true;
-			return `${row.account.name} ${row.account.id} ${row.account.segment} ${row.account.industry}`
+			// The same three fields the grid can match on — a grid cell carries no
+			// industry, and a filter that dims all 1,000 squares while listing rows
+			// reads as a broken grid.
+			return `${row.account.name} ${row.account.id} ${row.account.segment}`
 				.toLowerCase()
 				.includes(query);
 		});
@@ -228,10 +249,7 @@ function Portfolio({
 							<Button variant="secondary" onClick={() => setRevealed(false)}>
 								Reset
 							</Button>
-							<Link
-								to="/live"
-								search={{ size: 150, concurrency: 60, seed: 42 }}
-							>
+							<Link to="/live" search={LIVE_SEARCH_DEFAULTS}>
 								<Button size="lg">Run it live →</Button>
 							</Link>
 						</div>
@@ -274,7 +292,7 @@ function Portfolio({
 									.{" "}
 									<Link
 										to="/live"
-										search={{ size: 150, concurrency: 60, seed: 42 }}
+										search={LIVE_SEARCH_DEFAULTS}
 										className="text-primary underline decoration-dotted underline-offset-4"
 									>
 										Run it again live
@@ -301,7 +319,7 @@ function Portfolio({
 								<Tabs
 									value={search.lens}
 									onValueChange={(value) =>
-										setSearch({ lens: value as Lens, band: "all" })
+										setSearch({ lens: value as LensParam, band: "all" })
 									}
 									variant="segment"
 								>
@@ -315,10 +333,8 @@ function Portfolio({
 
 							<div className="sm:w-72">
 								<Input
-									value={search.q ?? ""}
-									onChange={(value) =>
-										setSearch({ q: value.trim() === "" ? undefined : value })
-									}
+									value={queryDraft}
+									onChange={setQueryDraft}
 									placeholder="Filter by name, id or segment"
 									leftIcon={<Search className="h-4 w-4" />}
 								/>
@@ -355,7 +371,9 @@ function Portfolio({
 						Nothing has been evaluated yet. Press the button to reveal a
 						recorded run of{" "}
 						<span className="numeric font-semibold text-foreground">
-							{count((telemetry?.judgments ?? 0) || 6000)}
+							{count(
+								telemetry?.judgments ?? PORTFOLIO_SIZE * QUESTIONS_PER_ACCOUNT,
+							)}
 						</span>{" "}
 						judgments across the portfolio.
 					</p>
@@ -383,7 +401,7 @@ function WhatJustHappened() {
 						{`usage down 20%     → +20 risk
 renewal < 90 days  → +10 risk
 ticket open        → +10 risk
-───────────────────────────
+---------------------------
 score 40 → "at risk"`}
 					</pre>
 					<p className="mt-2 text-xs text-muted-foreground">
