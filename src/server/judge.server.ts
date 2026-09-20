@@ -23,11 +23,16 @@ import type {
 	PrimaryReason,
 	ScoreAnswer,
 } from "#/lib/portfolio/types";
+import {
+	MAX_REQUESTS_PER_SECOND,
+	rateLimiter,
+} from "#/server/rate-limit.server";
 import { createTypeSafeClient } from "#/server/typesafe.server";
 
 export const DEFAULT_CONCURRENCY = 32;
 /** Jev's published cap is 1,200 requests/minute. Stay comfortably under it. */
 export const DEFAULT_REQUESTS_PER_SECOND = 18;
+export { MAX_REQUESTS_PER_SECOND };
 
 export interface JudgeOutcome {
 	account: Account;
@@ -144,28 +149,6 @@ export async function judgeAccount(
 	}
 }
 
-/** Token bucket, so a burst of workers cannot trip the per-minute request cap. */
-function rateLimiter(requestsPerSecond: number) {
-	let tokens = requestsPerSecond;
-	let last = Date.now();
-	return async function take(): Promise<void> {
-		for (;;) {
-			const now = Date.now();
-			tokens = Math.min(
-				requestsPerSecond,
-				tokens + ((now - last) / 1000) * requestsPerSecond,
-			);
-			last = now;
-			if (tokens >= 1) {
-				tokens -= 1;
-				return;
-			}
-			const waitMs = ((1 - tokens) / requestsPerSecond) * 1000;
-			await new Promise((resolve) => setTimeout(resolve, Math.max(5, waitMs)));
-		}
-	};
-}
-
 /** Bounded-concurrency map that yields each result the moment it lands. */
 async function* mapPool<T, R>(
 	items: readonly T[],
@@ -205,12 +188,19 @@ export async function* runTriage(
 ): AsyncGenerator<JudgeOutcome> {
 	const concurrency = Math.max(1, options.concurrency ?? DEFAULT_CONCURRENCY);
 	const take = rateLimiter(
-		options.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND,
+		Math.min(
+			MAX_REQUESTS_PER_SECOND,
+			Math.max(1, options.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND),
+		),
 	);
 	const client = createTypeSafeClient();
 
 	yield* mapPool(accounts, concurrency, async (account) => {
-		if (options.signal?.aborted) {
+		try {
+			await take(options.signal);
+			options.signal?.throwIfAborted();
+			return judgeAccount(client, account, options.signal);
+		} catch {
 			return {
 				account,
 				judgments: null,
@@ -220,8 +210,6 @@ export async function* runTriage(
 				model: JEV_MODEL,
 			} satisfies JudgeOutcome;
 		}
-		await take();
-		return judgeAccount(client, account, options.signal);
 	});
 }
 

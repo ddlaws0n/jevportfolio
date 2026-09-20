@@ -9,6 +9,8 @@
 
 import { TypeSafeClient } from "@typesafe-ai/sdk";
 
+import { takeRequest } from "#/server/rate-limit.server";
+
 if (typeof window !== "undefined") {
 	throw new Error(
 		"typesafe.server.ts was imported into a client bundle. Call it through a server function.",
@@ -46,6 +48,11 @@ export function createTypeSafeClient(): TypeSafeClient {
 	return new TypeSafeClient({
 		apiKey,
 		defaultModel: process.env.TYPESAFE_DEFAULT_MODEL ?? "jev-latest",
+		fetch: async (input, init) => {
+			await takeRequest(init?.signal);
+			init?.signal?.throwIfAborted();
+			return globalThis.fetch(input, init);
+		},
 		// One account is a small request; a long tail hurts the wall-clock number
 		// more than a retry does.
 		timeout: 20_000,

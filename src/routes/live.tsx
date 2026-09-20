@@ -19,6 +19,7 @@ import {
 	LIVE_RUN_SIZES,
 	LIVE_SEARCH_DEFAULTS,
 	liveSearchSchema,
+	PORTFOLIO_SEARCH_DEFAULTS,
 } from "#/lib/portfolio/search";
 import { BAND_META } from "#/lib/portfolio/triage";
 import type {
@@ -41,8 +42,7 @@ export const Route = createFileRoute("/live")({
 	ssr: "data-only",
 	validateSearch: liveSearchSchema,
 	search: { middlewares: [stripSearchParams(LIVE_SEARCH_DEFAULTS)] },
-	loaderDeps: ({ search }) => ({ seed: search.seed }),
-	loader: ({ deps }) => getRunnerStatus({ data: { seed: deps.seed } }),
+	loader: () => getRunnerStatus(),
 	head: () => ({
 		meta: [
 			{ title: "Live run — 1000 Accounts" },
@@ -56,7 +56,7 @@ export const Route = createFileRoute("/live")({
 	component: LiveRunner,
 });
 
-type Status = "idle" | "running" | "done" | "error";
+type Status = "idle" | "running" | "stopped" | "done" | "error";
 
 interface Finding {
 	id: string;
@@ -86,6 +86,8 @@ function LiveRunner() {
 	const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
 	const [findings, setFindings] = useState<Finding[]>([]);
 	const [cellBands, setCellBands] = useState<Record<string, PriorityBand>>({});
+	/** The size the in-flight (or last) run was launched with. */
+	const [runSize, setRunSize] = useState(search.size);
 
 	const abortRef = useRef<AbortController | null>(null);
 
@@ -112,6 +114,9 @@ function LiveRunner() {
 
 		reset();
 		setState("running");
+		// Pin the size for the whole run: the counters, the progress bar and the
+		// cell grid all measure against it, and the tabs that set it stay on screen.
+		setRunSize(search.size);
 
 		try {
 			const stream = await run({
@@ -162,14 +167,14 @@ function LiveRunner() {
 	const cells = useMemo(
 		() =>
 			Array.from(
-				{ length: search.size },
+				{ length: runSize },
 				(_, i) => `ACC-${String(i + 1).padStart(4, "0")}`,
 			),
-		[search.size],
+		[runSize],
 	);
 
 	const pending = state === "running";
-	const progress = done / search.size;
+	const progress = Math.min(1, done / runSize);
 
 	return (
 		<div className="mx-auto w-full max-w-[1100px] px-4 pb-16 pt-12 sm:px-6">
@@ -190,7 +195,7 @@ function LiveRunner() {
 					disabled. The recorded baseline on the{" "}
 					<Link
 						to="/"
-						search={{ lens: "all", band: "all", sort: "priority" }}
+						search={PORTFOLIO_SEARCH_DEFAULTS}
 						className="underline underline-offset-4"
 					>
 						portfolio page
@@ -203,28 +208,37 @@ function LiveRunner() {
 				<div className="space-y-4">
 					<div>
 						<p className="label-caps mb-2">Accounts to triage</p>
-						<Tabs
-							value={String(search.size)}
-							onValueChange={(value) =>
-								void navigate({
-									search: (prev) => ({
-										...prev,
-										size: Number(value) as (typeof LIVE_RUN_SIZES)[number],
-									}),
-									replace: true,
-									resetScroll: false,
-								})
-							}
-							variant="segment"
+						{/* Locked while a run is in flight: the run was launched against
+						    one size, and the counters, the progress bar and the cell grid
+						    all measure it against that size, not against this control. */}
+						<div
+							aria-disabled={pending}
+							className={cn(pending && "pointer-events-none opacity-50")}
 						>
-							<TabsList>
-								{LIVE_RUN_SIZES.map((size) => (
-									<TabsTrigger key={size} value={String(size)}>
-										{count(size)}
-									</TabsTrigger>
-								))}
-							</TabsList>
-						</Tabs>
+							<Tabs
+								value={String(search.size)}
+								onValueChange={(value) => {
+									if (pending) return;
+									void navigate({
+										search: (prev) => ({
+											...prev,
+											size: Number(value) as (typeof LIVE_RUN_SIZES)[number],
+										}),
+										replace: true,
+										resetScroll: false,
+									});
+								}}
+								variant="segment"
+							>
+								<TabsList>
+									{LIVE_RUN_SIZES.map((size) => (
+										<TabsTrigger key={size} value={String(size)}>
+											{count(size)}
+										</TabsTrigger>
+									))}
+								</TabsList>
+							</Tabs>
+						</div>
 					</div>
 					<p className="numeric text-xs text-muted-foreground">
 						{count(search.size * status.questionsPerAccount)} judgments ·{" "}
@@ -238,7 +252,10 @@ function LiveRunner() {
 							variant="secondary"
 							onClick={() => {
 								abortRef.current?.abort();
-								setState("idle");
+								// "stopped", not "idle": the panel below is gated on the
+								// state, and idling it would throw away every judgment the
+								// visitor just paid for and watched land.
+								setState("stopped");
 							}}
 						>
 							Stop
@@ -261,7 +278,9 @@ function LiveRunner() {
 						successText="Run complete"
 						errorText="Run failed"
 					>
-						{state === "done" ? "Run again" : "Triage now"}
+						{state === "done" || state === "stopped"
+							? "Run again"
+							: "Triage now"}
 					</StatefulButton>
 				</div>
 			</div>
@@ -272,11 +291,11 @@ function LiveRunner() {
 						<div className="flex flex-wrap items-center justify-between gap-3">
 							{pending ? (
 								<ThinkingShimmer>
-									{count(done)} / {count(search.size)} accounts
+									{count(done)} / {count(runSize)} accounts
 								</ThinkingShimmer>
 							) : (
 								<span className="numeric text-sm font-semibold">
-									{count(done)} / {count(search.size)} accounts
+									{count(done)} / {count(runSize)} accounts
 								</span>
 							)}
 							<AgentProgress
@@ -312,7 +331,7 @@ function LiveRunner() {
 					</div>
 
 					<p className="sr-only">
-						{`Live triage progress: ${done} of ${search.size} accounts judged.`}
+						{`Live triage progress: ${done} of ${runSize} accounts judged.`}
 					</p>
 					<div
 						className="grid gap-[3px] sm:gap-1"

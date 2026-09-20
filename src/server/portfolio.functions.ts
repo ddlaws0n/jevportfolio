@@ -12,8 +12,9 @@ import { getRequest, setResponseHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 import type { PortfolioSnapshot } from "#/lib/portfolio/baseline";
-import { generatePortfolio } from "#/lib/portfolio/generate";
+import { generatePortfolio, PORTFOLIO_SIZE } from "#/lib/portfolio/generate";
 import { JEV_MODEL, QUESTIONS_PER_ACCOUNT } from "#/lib/portfolio/questions";
+import { ACCOUNT_ID } from "#/lib/portfolio/search";
 import { countBands, triageAccount } from "#/lib/portfolio/triage";
 import type {
 	Telemetry,
@@ -47,7 +48,7 @@ export const getPortfolioSnapshot = createServerFn({ method: "GET" }).handler(
 const accountIdSchema = z.object({
 	accountId: z
 		.string()
-		.regex(/^ACC-\d{4}$/, "Expected an account id like ACC-0138"),
+		.regex(ACCOUNT_ID, "Expected an account id like ACC-0138"),
 });
 
 /** Full detail for one account: inputs, raw judgments, derived scores. */
@@ -67,6 +68,14 @@ export const getMethodology = createServerFn({ method: "GET" }).handler(
 		telemetry: Telemetry | null;
 		bands: ReturnType<typeof countBands>;
 	}> => {
+		// Derived entirely from the committed baseline, so it is as cacheable as
+		// the snapshot itself.
+		setResponseHeaders(
+			new Headers({
+				"Cache-Control": "public, max-age=300",
+				"CDN-Cache-Control": "max-age=3600, stale-while-revalidate=86400",
+			}),
+		);
 		const snapshot = getSnapshot();
 		return {
 			audit: getArchetypeAudit(),
@@ -76,35 +85,28 @@ export const getMethodology = createServerFn({ method: "GET" }).handler(
 	},
 );
 
-/** What the live runner page needs before the visitor presses anything. */
-export const getRunnerStatus = createServerFn({ method: "GET" })
-	.validator(
-		z.object({
-			seed: z
-				.number()
-				.int()
-				.min(0)
-				.max(2 ** 31 - 1)
-				.default(42),
-		}),
-	)
-	.handler(
-		async ({
-			data,
-		}): Promise<{
-			liveRunAvailable: boolean;
-			model: string;
-			questionsPerAccount: number;
-			portfolioSize: number;
-			baselineTelemetry: Telemetry | null;
-		}> => ({
-			liveRunAvailable: hasApiKey(),
-			model: JEV_MODEL,
-			questionsPerAccount: QUESTIONS_PER_ACCOUNT,
-			portfolioSize: generatePortfolio(data.seed).length,
-			baselineTelemetry: getSnapshot().telemetry,
-		}),
-	);
+/**
+ * What the live runner page needs before the visitor presses anything.
+ *
+ * Takes no seed: the portfolio is the same size for every one of them, and
+ * building 1,000 accounts per distinct seed would let an unauthenticated caller
+ * burn CPU and evict the generator's cache at will.
+ */
+export const getRunnerStatus = createServerFn({ method: "GET" }).handler(
+	async (): Promise<{
+		liveRunAvailable: boolean;
+		model: string;
+		questionsPerAccount: number;
+		portfolioSize: number;
+		baselineTelemetry: Telemetry | null;
+	}> => ({
+		liveRunAvailable: hasApiKey(),
+		model: JEV_MODEL,
+		questionsPerAccount: QUESTIONS_PER_ACCOUNT,
+		portfolioSize: PORTFOLIO_SIZE,
+		baselineTelemetry: getSnapshot().telemetry,
+	}),
+);
 
 export const liveRunSchema = z.object({
 	size: z.union([
@@ -155,35 +157,37 @@ export const streamLiveTriage = createServerFn({ method: "POST" })
 			return;
 		}
 
-		// Stop paying for a run the visitor has already navigated away from.
-		const signal = getRequest().signal;
-		const accounts = generatePortfolio(data.seed).slice(0, data.size);
-
-		yield {
-			type: "start",
-			total: accounts.length,
-			concurrency: data.concurrency,
-			model: JEV_MODEL,
-		};
-
-		let done = 0;
 		let inputTokens = 0;
-		let outputTokens = 0;
-		let failures = 0;
-		let succeeded = 0;
-		let model = JEV_MODEL;
-		const rows: TriagedAccount[] = [];
-		let pending: ProgressResult[] = [];
-
-		const startedAt = performance.now();
-		// Batch frames so a 1,000-account run does not emit 1,000 chunks.
-		const frameSize = Math.max(5, Math.round(accounts.length / 60));
-
+		// Enter the lease's cleanup scope before setup or the first yield. A
+		// disconnect immediately after "start" must release the reservation too.
 		try {
+			// Stop paying for a run the visitor has already navigated away from.
+			const signal = getRequest().signal;
+			const accounts = generatePortfolio(data.seed).slice(0, data.size);
+
+			yield {
+				type: "start",
+				total: accounts.length,
+				concurrency: data.concurrency,
+				model: JEV_MODEL,
+			};
+
+			let done = 0;
+			let outputTokens = 0;
+			let failures = 0;
+			let succeeded = 0;
+			let model = JEV_MODEL;
+			const rows: TriagedAccount[] = [];
+			let pending: ProgressResult[] = [];
+
+			const startedAt = performance.now();
+			// Batch frames so a 1,000-account run does not emit 1,000 chunks.
+			const frameSize = Math.max(5, Math.round(accounts.length / 60));
+
 			for await (const outcome of runTriage(accounts, {
 				concurrency: data.concurrency,
-				// Match the request rate to the worker count: the workers are what
-				// actually issue requests, so a lower ceiling would just idle them.
+				// Local pacing follows the worker count, but the shared SDK
+				// transport limiter caps all runs and retries on this instance.
 				requestsPerSecond: data.concurrency,
 				signal,
 			})) {

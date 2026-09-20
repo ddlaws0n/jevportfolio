@@ -1,6 +1,7 @@
 import {
 	createFileRoute,
 	Link,
+	notFound,
 	stripSearchParams,
 } from "@tanstack/react-router";
 
@@ -9,8 +10,10 @@ import {
 	AccountDetailHeader,
 } from "#/components/portfolio/AccountDetail";
 import {
+	ACCOUNT_ID,
 	ACCOUNT_SEARCH_DEFAULTS,
 	accountSearchSchema,
+	PORTFOLIO_SEARCH_DEFAULTS,
 } from "#/lib/portfolio/search";
 import { getAccountDetail } from "#/server/portfolio.functions";
 
@@ -19,8 +22,12 @@ export const Route = createFileRoute("/accounts/$accountId")({
 	ssr: true,
 	validateSearch: accountSearchSchema,
 	search: { middlewares: [stripSearchParams(ACCOUNT_SEARCH_DEFAULTS)] },
-	loader: ({ params }) =>
-		getAccountDetail({ data: { accountId: params.accountId } }),
+	loader: ({ params }) => {
+		// A malformed id would otherwise fail the server function's validator and
+		// surface as an error boundary rather than the route's own 404.
+		if (!ACCOUNT_ID.test(params.accountId)) throw notFound();
+		return getAccountDetail({ data: { accountId: params.accountId } });
+	},
 	head: ({ loaderData }) => ({
 		meta: loaderData
 			? [
@@ -52,9 +59,8 @@ function AccountPage() {
 			<Link
 				to="/"
 				search={{
+					...PORTFOLIO_SEARCH_DEFAULTS,
 					lens,
-					band: "all",
-					sort: "priority",
 					account: row.account.id,
 				}}
 				className="label-caps transition-colors hover:text-foreground"
