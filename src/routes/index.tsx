@@ -359,7 +359,8 @@ function Portfolio({
 								rows={tableRows}
 								lens={lens}
 								sort={search.sort}
-								onSortChange={(sort) => setSearch({ sort })}
+								order={search.order}
+								onSortChange={(sort, order) => setSearch({ sort, order })}
 								onSelect={selectAccount}
 							/>
 						</div>

@@ -6,7 +6,7 @@ import {
 	type TableColumn,
 } from "#/components/motion/table";
 import { gbp, pct, titleCase } from "#/lib/format";
-import type { SortParam } from "#/lib/portfolio/search";
+import type { SortOrder, SortParam } from "#/lib/portfolio/search";
 import { BAND_META, type Lens } from "#/lib/portfolio/triage";
 import type { TriagedAccount } from "#/lib/portfolio/types";
 import { cn } from "#/lib/utils";
@@ -25,7 +25,7 @@ function Probability({ value, tone }: { value: number; tone: string }) {
 	);
 }
 
-const SORT_KEY: Record<SortParam, string> = {
+const SORT_KEY: Record<Exclude<SortParam, "none">, string> = {
 	priority: "score",
 	arr: "arr",
 	renewal: "renewal",
@@ -49,6 +49,7 @@ export function PriorityTable({
 	rows,
 	lens,
 	sort,
+	order,
 	onSortChange,
 	onSelect,
 	height = 460,
@@ -56,26 +57,22 @@ export function PriorityTable({
 	rows: TriagedAccount[];
 	lens: Lens;
 	sort: SortParam;
-	onSortChange: (sort: SortParam) => void;
+	order: SortOrder;
+	onSortChange: (sort: SortParam, order: SortOrder) => void;
 	onSelect: (accountId: string) => void;
 	height?: number;
 }) {
-	const [tableSort, setTableSort] = useState<SortState | null>(() => ({
-		key: SORT_KEY[sort],
-		direction: "desc",
-	}));
+	const [tableSort, setTableSort] = useState<SortState | null>(() =>
+		sort === "none" ? null : { key: SORT_KEY[sort], direction: order },
+	);
 
-	// `defaultSort` is read once, at mount, so on its own the table would ignore
-	// every later move of the URL — the back button, a shared link opened over
-	// this one, the `replace` navigation the lens tabs do. Follow the URL when it
-	// names a different sort, and leave a purely local sort alone.
+	// Follow navigation, including direction and the unsorted state. Other
+	// columns stay local until a URL sort changes.
 	useEffect(() => {
-		setTableSort((current) =>
-			current && SORT_PARAM[current.key] === sort
-				? current
-				: { key: SORT_KEY[sort], direction: "desc" },
+		setTableSort(
+			sort === "none" ? null : { key: SORT_KEY[sort], direction: order },
 		);
-	}, [sort]);
+	}, [sort, order]);
 
 	const columns = useMemo<TableColumn<TriagedAccount>[]>(() => {
 		const scoreKey =
@@ -220,8 +217,11 @@ export function PriorityTable({
 			sort={tableSort}
 			onSortChange={(next) => {
 				setTableSort(next);
-				const mapped = next ? SORT_PARAM[next.key] : undefined;
-				if (mapped && mapped !== sort) onSortChange(mapped);
+				const mapped = next ? SORT_PARAM[next.key] : "none";
+				const direction = next?.direction ?? "desc";
+				if (mapped && (mapped !== sort || direction !== order)) {
+					onSortChange(mapped, direction);
+				}
 			}}
 			rowHeight={52}
 			height={height}
