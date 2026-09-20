@@ -32,7 +32,7 @@ export const Route = createFileRoute("/accounts/$accountId")({
 		meta: loaderData
 			? [
 					{
-						title: `${loaderData.account.name} — 1000 Accounts`,
+						title: `${loaderData.account.name} — Who Needs You`,
 					},
 					{
 						name: "description",
